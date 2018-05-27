@@ -33,12 +33,14 @@ is protected and easily accessible.
          * [Changing Parameters of a Running Container](#changing-parameters-of-a-running-container)
       * [Docker Compose File](#docker-compose-file)
       * [Docker Image Update](#docker-image-update)
+         * [Synology](#synology)
+         * [unRAID](#unraid)
       * [User/Group IDs](#usergroup-ids)
       * [Accessing the GUI](#accessing-the-gui)
       * [Security](#security)
          * [Certificates](#certificates)
-         * [Shell Access](#shell-access)
          * [VNC Password](#vnc-password)
+      * [Shell Access](#shell-access)
       * [Reverse Proxy](#reverse-proxy)
          * [Routing Based on Hostname](#routing-based-on-hostname)
          * [Routing Based on URL Path](#routing-based-on-url-path)
@@ -47,6 +49,7 @@ is protected and easily accessible.
       * [Troubleshooting](#troubleshooting)
          * [Crashes / Maximum Amount of Allocated Memory](#crashes--maximum-amount-of-allocated-memory)
          * [Inotify's Watch Limit](#inotifys-watch-limit)
+            * [Synology](#synology-1)
          * [Empty /storage](#empty-storage)
          * [Device Status Is Waiting For Connection](#device-status-is-waiting-for-connection)
          * [Cannot Restore Files](#cannot-restore-files)
@@ -114,7 +117,7 @@ of this parameter has the format `<VARIABLE_NAME>=<VALUE>`.
 |`VNC_PASSWORD`| Password needed to connect to the application's GUI.  See the [VNC Password](#vnc-password) section for more details. | (unset) |
 |`X11VNC_EXTRA_OPTS`| Extra options to pass to the x11vnc server running in the Docker container.  **WARNING**: For advanced users. Do not use unless you know what you are doing. | (unset) |
 |`ENABLE_CJK_FONT`| When set to `1`, open source computer font `WenQuanYi Zen Hei` is installed.  This font contains a large range of Chinese/Japanese/Korean characters. | `0` |
-|`CRASHPLAN_SRV_MAX_MEM`| Maximum amount of memory the CrashPlan Engine is allowed to use. One of the following memory unit (case insensitive) should be added as a suffix to the size: `G`, `M` or `K`.  By default, when this variable is not set, a maximum of 1024MB (`1024M`) of memory is allowed. | (unset) |
+|`CRASHPLAN_SRV_MAX_MEM`| Maximum amount of memory the CrashPlan Engine is allowed to use. One of the following memory unit (case insensitive) should be added as a suffix to the size: `G`, `M` or `K`.  By default, when this variable is not set, a maximum of 1024MB (`1024M`) of memory is allowed. **NOTE**: Setting this variable as the same effect as running the `java mx VALUE, restart` command from the CrashPlan command line. | (unset) |
 
 ### Data Volumes
 
@@ -203,6 +206,32 @@ docker rm crashplan-pro
 ```
   4. Start the container using the `docker run` command.
 
+### Synology
+
+For owners of a Synology NAS, the following steps can be use to update a
+container image.
+
+  1.  Open the *Docker* application.
+  2.  Click on *Registry* in the left pane.
+  3.  In the search bar, type the name of the container (`jlesage/docker-crashplan-pro`).
+  4.  Select the image, click *Download* and then choose the `latest` tag.
+  5.  Wait for the download to complete.  A  notification will appear once done.
+  6.  Click on *Container* in the left pane.
+  7.  Select your CrashPlan PRO container.
+  8.  Stop it by clicking *Action*->*Stop*.
+  9.  Clear the container by clicking *Action*->*Clear*.  This removes the
+      container while keeping its configuration.
+  10. Start the container again by clicking *Action*->*Start*. **NOTE**:  The
+      container may temporarily disappear from the list while it is re-created.
+
+### unRAID
+
+For unRAID, a container image can be updated by following these steps:
+
+  1. Select the *Docker* tab.
+  2. Click the *Check for Updates* button at the bottom of the page.
+  3. Click the *update ready* link of the container to be updated.
+
 ## User/Group IDs
 
 When using data volumes (`-v` flags), permissions issues can occur between the
@@ -277,17 +306,6 @@ or VNC client, make sure to supply your own valid certificates.
 **NOTE**: Certificate files are monitored and relevant daemons are automatically
 restarted when changes are detected.
 
-### Shell Access
-
-To get shell access to a the running container, execute the following command:
-
-```
-docker exec -ti CONTAINER sh
-```
-
-Where `CONTAINER` is the ID or the name of the container used during its
-creation (e.g. `crashplan-pro`).
-
 ### VNC Password
 
 To restrict access to your application, a password can be specified.  This can
@@ -308,6 +326,17 @@ connection to prevent sending the password in clear over an unencrypted channel.
 the Remote Framebuffer Protocol [RFC](https://tools.ietf.org/html/rfc6143) (see
 section [7.2.2](https://tools.ietf.org/html/rfc6143#section-7.2.2)).  Any
 characters beyhond the limit are ignored.
+
+## Shell Access
+
+To get shell access to a the running container, execute the following command:
+
+```
+docker exec -ti CONTAINER sh
+```
+
+Where `CONTAINER` is the ID or the name of the container used during its
+creation (e.g. `crashplan-pro`).
 
 ## Reverse Proxy
 
@@ -472,10 +501,21 @@ maximum amount of memory CrashPlan is allowed to use. This can be done by:
 ### Inotify's Watch Limit
 
 If CrashPlan exceeds inotify's max watch limit, real-time file watching cannot
-work properly and the inotify watch limit needs to be increased on the **host**.
+work properly and the inotify watch limit needs to be increased on the **host**,
+not the container.
 
 For more details, see the CrashPlan's [Linux real-time file watching errors]
 article.
+
+#### Synology
+
+On Synology NAS, the instuctions provided by the article mentioned in the
+previous section apply, except that the inotify's max watch limit must be set in
+`/etc.defaults/sysctl.conf` (instead of `/etc/sysctl.conf`) to make the setting
+permanent.
+
+**NOTE**: After an upgrade of the DSM software, verify that the content of the
+file has not been overwritten.
 
 ### Empty `/storage`
 

@@ -1,17 +1,20 @@
 #
-# crashplan Dockerfile
+# crashplan-pro Dockerfile
 #
-# https://github.com/jlesage/docker-crashplan
+# https://github.com/jlesage/docker-crashplan-pro
 #
 
 # Pull base image.
-FROM jlesage/baseimage-gui:alpine-3.6-glibc-v3.3.4
+FROM jlesage/baseimage-gui:alpine-3.7-glibc-v3.3.4
 
 # Define software versions.
-ARG CRASHPLANPRO_VERSION=6.7.0
+ARG CRASHPLANPRO_VERSION=6.7.2
+ARG CRASHPLANPRO_TIMESTAMP=1512021600672
+ARG CRASHPLANPRO_BUILD=5609
 
 # Define software download URLs.
 ARG CRASHPLANPRO_URL=https://download.code42.com/installs/linux/install/CrashPlanSmb/CrashPlanSmb_${CRASHPLANPRO_VERSION}_Linux.tgz
+#ARG CRASHPLANPRO_URL=https://web-eam-msp.crashplanpro.com/client/installers/CrashPlanSmb_${CRASHPLANPRO_VERSION}_${CRASHPLANPRO_TIMESTAMP}_${CRASHPLANPRO_BUILD}_Linux.tgz
 
 # Define container build variables.
 ARG TARGETDIR=/usr/local/crashplan
@@ -54,7 +57,9 @@ RUN \
     # The '/var/lib/crashplan' directory should be stored outside the container.
     ln -s /config/var /var/lib/crashplan && \
     # The '/repository' directory should be stored outside the container.
-    ln -s /config/repository /repository && \
+    # NOTE: The '/repository/metadata' directory changed in 6.7.0 changed to
+    #       '/usr/local/crashplan/metadata' in 6.7.1.
+    ln -s /config/repository/metadata /usr/local/crashplan/metadata && \
     # Download and install the JRE.
     echo "Installing JRE..." && \
     source crashplan-install/install.defaults && \
@@ -66,6 +71,11 @@ RUN \
 
 # Misc adjustments.
 RUN  \
+    # Remove the 'nobody' user.  This is to avoid issue when the container is
+    # running under ID 65534.
+    sed-patch '/^nobody:/d' /defaults/passwd && \
+    sed-patch '/^nobody:/d' /defaults/group && \
+    sed-patch '/^nobody:/d' /defaults/shadow && \
     # Clear stuff from /etc/fstab to avoid showing irrelevant devices in the open
     # file dialog window.
     echo > /etc/fstab && \
@@ -84,6 +94,8 @@ RUN \
         eudev \
         gconf \
         libselinux@edge \
+        # The following package is used to send key presses to the X process.
+        xdotool \
         # For the monitor.
         yad \
         bc
